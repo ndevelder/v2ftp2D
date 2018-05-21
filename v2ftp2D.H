@@ -126,6 +126,7 @@ class v2ftp2D
             dimensionedScalar nutBlend_;
             dimensionedScalar psiNuFrac_;
 			dimensionedScalar ellipticSwitch_;
+			dimensionedScalar coordType_;
 			dimensionedScalar fastPsType_;
 			dimensionedScalar slowPsType_;
 			dimensionedScalar fWallType_;
@@ -172,6 +173,8 @@ class v2ftp2D
             volScalarField epsHat_;
 			volScalarField kSqrt_;
 			volScalarField alpha_;
+			volScalarField upsilon_;
+			volScalarField chi_;
 			volScalarField phiSqrt_;
 			volScalarField phiProd_;
 			volVectorField gradkSqrt_;
@@ -195,14 +198,18 @@ class v2ftp2D
 			volSymmTensorField Rev_;
 			volScalarField D_;
 			volVectorField newRS_;
-			volTensorField Rnfp_;
+			volTensorField ev_;
+			volSymmTensorField Rnfp_;
 			volSymmTensorField Rcart_;
+			volSymmTensorField Pcart_;
 			volTensorField nfp_;
 			volTensorField uGradnfp_;
 			volSymmTensorField Snfp_;
 			volSymmTensorField Pnfp_;
 			volSymmTensorField Dnfp_;
-			volTensorField fastGlm_;
+			volSymmTensorField fastGlm_;
+			volVectorField fastGlmVec_;
+			volTensorField tenPCart_;
 			volTensorField tenP_;
 
 
