@@ -1487,14 +1487,14 @@ tmp<volSymmTensorField> v2ftp2D::devReff() const
 }
 
 // Term that is directly added to the momentum equation
-tmp<fvVectorMatrix> v2ftp2D::divDevReff(volVectorField& U) const
+tmp<fvVectorMatrix> v2ftp2D::divDevReff() const
 {
     return
     (
        fvc::grad(phiReal())
      + fvc::curl(psiReal())
-     + fvc::laplacian(nut_, U, "laplacian(nuEff,U)")
-     - fvm::laplacian(nuEff(), U)
+     + fvc::laplacian(nut_, U_, "laplacian(nuEff,U_)")
+     - fvm::laplacian(nuEff(), U_)
     );
 }
 
@@ -1939,25 +1939,25 @@ void v2ftp2D::correct()
 	//Rnfp_.replace(symmTensor::XY, psinfp.component(vector::Z));
 	//Rnfp_.replace(symmTensor::XZ, psinfp.component(vector::Y));
 	//Rnfp_.replace(symmTensor::YZ, psinfp.component(vector::X));
-	//Rnfp_.replace(symmTensor::XY, psiNow & punit);
-	//Rnfp_.replace(symmTensor::XZ, psiNow & nunit);
-	//Rnfp_.replace(symmTensor::YZ, psiNow & funit);
-	Rnfp_.replace(symmTensor::XY, 0.5*(((psiNow ^ funit) & nunit) - ((psiNow ^ nunit) & funit)));
-	Rnfp_.replace(symmTensor::XZ, 0.5*(((psiNow ^ funit) & punit) - ((psiNow ^ punit) & funit)));
-	Rnfp_.replace(symmTensor::YZ, 0.5*(((psiNow ^ nunit) & punit) - ((psiNow ^ punit) & nunit)));
+	Rnfp_.replace(symmTensor::XY, psiNow & punit);
+	Rnfp_.replace(symmTensor::XZ, psiNow & nunit);
+	Rnfp_.replace(symmTensor::YZ, psiNow & funit);
+	//Rnfp_.replace(symmTensor::XY, 0.5*(((psiNow ^ funit) & nunit) - ((psiNow ^ nunit) & funit)));
+	//Rnfp_.replace(symmTensor::XZ, 0.5*(((psiNow ^ funit) & punit) - ((psiNow ^ punit) & funit)));
+	//Rnfp_.replace(symmTensor::YZ, 0.5*(((psiNow ^ nunit) & punit) - ((psiNow ^ punit) & nunit)));
 	  
 	
 	uGradnfp_ = (nfp_.T() & uGrad_) & nfp_;  
-	Snfp_ =  symm(uGradnfp_);
+	Snfp_ =  symm((nfp_.T() & uGrad_) & nfp_);
 	
 	volVectorField Vnfp("Vnfp", *(2.0*skew(uGradnfp_)));
 	volVectorField VnfpCart("VnfpCart", (nfp_ & Vnfp));
 	volTensorField evopp("evopp", 2.0*k_*I - ev_);
 	   
-	tenP_ = Rnfp_ & uGradnfp_;
-	volTensorField tenPtr("tenPtr", Rnfp_ & uGradnfp_.T());
-	Pnfp_ = -twoSymm(tenP_);
-	Dnfp_ = -twoSymm(tenPtr);
+	tenP_ = -Rnfp_ & uGradnfp_;
+	volTensorField tenPtr("tenPtr", -Rnfp_ & uGradnfp_.T());
+	Pnfp_ = twoSymm(tenP_);
+	Dnfp_ = twoSymm(tenPtr);
 	
 	volSymmTensorField bij("bij", Rnfp_/(k_+k0_) - (2.0/3.0)*I);
 	volTensorField nonLinSlow("nonLinSlow", dev(bij & bij.T()));
@@ -1970,15 +1970,15 @@ void v2ftp2D::correct()
 	nonLinSlowVec.replace(vector::Z, nonLinSlow.component(tensor::XY));	
 	nonLinSlowVec = nfp_ & nonLinSlowVec;
 		
-	//fastGlmVec_.replace(vector::X, fastGlm_.component(symmTensor::YZ));
-    //fastGlmVec_.replace(vector::Y, fastGlm_.component(symmTensor::XZ));  
-	//fastGlmVec_.replace(vector::Z, fastGlm_.component(symmTensor::XY));
-	//fastGlmVec_ = nfp_ & fastGlmVec_;
+	fastGlmVec_.replace(vector::X, fastGlm_.component(symmTensor::YZ));
+    fastGlmVec_.replace(vector::Y, fastGlm_.component(symmTensor::XZ));  
+	fastGlmVec_.replace(vector::Z, fastGlm_.component(symmTensor::XY));
+	fastGlmVec_ = nfp_ & fastGlmVec_;
 	
 	volVectorField vecProd("vecProd", tpphi_*k_*vorticity_);
-	volTensorField skewP("skewP", skew(-tenPtr));
+	volTensorField skewP("skewP", skew(tenPtr));
 	
-	vecProd = -2.0*(*(skewP)) + (evopp & Vnfp);
+	vecProd = 2.0*(*(skewP.T())) + (evopp & Vnfp);
 	vecProd = nfp_ & vecProd;	
 		
 	//fastGlmVec_ = -0.6*(1.0-alpha_)*Vnfp + (eC3_ + eC4_)*2.0*(*(skew(tenP_)))/(k_+k0_);
@@ -1986,10 +1986,11 @@ void v2ftp2D::correct()
 	
 	Rcart_ = symm((nfp_ & Rnfp_ ) & nfp_.T());	
 	tenPCart_ = Rcart_ & uGrad_;
-	Pcart_ = symm((nfp_ & Pnfp_ ) & nfp_.T());
+	Pcart_ = -twoSymm(tenPCart_);
 	
-	phiProd_ = -k_*(fastGlm_.component(symmTensor::YY) - 0.4*GdK)/0.6;
-	phiProd_ = mag(Pnfp_.component(symmTensor::YY));
+	
+	phiProd_ = Pnfp_.component(symmTensor::YY);
+	
 	
     //*************************************//
     // f equation - with elliptic
@@ -2082,9 +2083,9 @@ void v2ftp2D::correct()
       - fvm::laplacian(DphiEff(), tpphi_)
       ==
 	    //Production
-		//phiProd_/(k_+k0_)
+		phiProd_/(k_+k0_)
 	    //Source - pressure strain
-        min(f_,(slowPS + fastPS + fwall))
+      + min(f_,(slowPS + fastPS + fwall))
         //BC wall correct	  
 	  - fvm::Sp(fwall/(tpphi_+tph0),tpphi_)
 	    //From k eqn phi/k derivation
